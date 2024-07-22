@@ -1,12 +1,16 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d'); // 캔버스에 그래픽 작업을 할 수 있게 해주는 여러 속성과 메소드가 들어있는 객체를 불러옴
 
-let posX = 100;
-let posY = 100;
+let posX = canvas.width / 2;
+let posY = canvas.height / 2;
 let prevPosX = 100;
 let prevPosY = 100;
 const speed = 5;
 const keys = {};
+let score = 0;
+const scoreDecrement = 50;
+const scoreIncrement = 0.1;
+let gameStarted = false;
 
 class Enemy {
   constructor() {
@@ -59,6 +63,7 @@ class Enemy {
     }
 
     this.draw();
+    this.checkCollision();
   }
 
   draw() {
@@ -66,7 +71,24 @@ class Enemy {
     drawBorderRect(this.posX, this.posY, 12, 12, 1);
   }
 
-  setDir() {}
+  checkCollision() {
+    // 간단한 충돌 감지
+    const distance = Math.sqrt(
+      (this.posX - posX) ** 2 + (this.posY - posY) ** 2
+    );
+    if (distance < 16) {
+      // 16은 캐릭터와 적의 크기 (20 / 2 + 12 / 2) 기준
+      this.onCollision();
+    }
+  }
+
+  onCollision() {
+    // console.log('충돌 발생!');
+    // 여기에 충돌 이벤트 처리를 추가할 수 있습니다.
+    score = 0;
+    resetPosition();
+    gameStarted = false;
+  }
 }
 
 const enemies = [];
@@ -97,7 +119,29 @@ function drawCharactor(x, y) {
   drawBorderRect(x, y, 20, 20, 3);
 }
 
+function drawScore() {
+  ctx.font = '20px Arial';
+  ctx.fillStyle = 'white';
+  ctx.textAlign = 'center';
+  ctx.fillText('Score: ' + Math.floor(score), canvas.width / 2, 20);
+}
+
+function drawReady() {
+  ctx.font = '40px Arial';
+  ctx.fillStyle = 'white';
+  ctx.textAlign = 'center';
+  ctx.fillText('준비', canvas.width / 2, canvas.height / 2);
+}
+
 function updatePosition() {
+  if (!gameStarted) {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawReady();
+    requestAnimationFrame(updatePosition);
+    return;
+  }
+
   // wasd키를 입력받아 캐릭터 위치값 변경
   prevPosX = posX;
   prevPosY = posY;
@@ -110,16 +154,34 @@ function updatePosition() {
   posX = Math.max(0, Math.min(canvas.width - 20, posX));
   posY = Math.max(0, Math.min(canvas.height - 20, posY));
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // 전체 캔버스를 지우고 다시 그립니다.
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height); // 전체 캔버스를 지우고 다시 그립니다.
   drawCharactor(posX, posY);
 
   for (let enemy of enemies) {
     enemy.update();
   }
+
+  score += scoreIncrement;
+  drawScore();
+
   requestAnimationFrame(updatePosition);
 }
 
+function resetPosition() {
+  posX = canvas.width / 2;
+  posY = canvas.height / 2;
+
+  for (let i = 0; i < enemyCount; i++) {
+    enemies[i].spawn();
+  }
+}
+
 function handleKeyDown(event) {
+  if (event.keyCode == 13) {
+    // 엔터 키 코드
+    gameStarted = true;
+  }
   keys[event.keyCode] = true;
 }
 
